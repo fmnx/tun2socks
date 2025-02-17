@@ -2,11 +2,13 @@ package engine
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/xjasonlyu/tun2socks/v2/transport/argo"
 	"net"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -78,6 +80,26 @@ func parseFD(u *url.URL, mtu uint32) (device.Device, error) {
 	return fdbased.Open(u.Host, mtu, offset)
 }
 
+func ParseArgoURL(input string) (string, string, string, string, error) {
+	pattern := `^argo://([^:@]*):([^@]*)@(.+)$`
+	re := regexp.MustCompile(pattern)
+
+	matches := re.FindStringSubmatch(input)
+	if len(matches) != 4 {
+		return "", "", "", "", errors.New("输入不符合预期格式")
+	}
+	hostPath := matches[3]
+
+	// 按 "/" 分割 host 和 path
+	host, path := hostPath, ""
+	if idx := strings.Index(hostPath, "/"); idx != -1 {
+		host = hostPath[:idx]
+		path = hostPath[idx:] // 保留 "/"
+	}
+
+	return matches[1], matches[2], host, path, nil
+}
+
 func parseProxy(s string) (proxy.Proxy, error) {
 	if !strings.Contains(s, "://") {
 		s = fmt.Sprintf("%s://%s", proto.Socks5 /* default protocol */, s)
@@ -85,6 +107,20 @@ func parseProxy(s string) (proxy.Proxy, error) {
 
 	u, err := url.Parse(s)
 	if err != nil {
+		// argo://ws:[2606:4700:a0::7]:80@example/path
+		if strings.Contains(s, "argo://") {
+			scheme, address, host, path, err := ParseArgoURL(s)
+			if err != nil {
+				return nil, err
+			}
+			u = &url.URL{
+				Scheme: "argo",
+				User:   url.UserPassword(scheme, address),
+				Host:   host,
+				Path:   path,
+			}
+			return parseArgo(u)
+		}
 		return nil, err
 	}
 
@@ -160,7 +196,7 @@ func parseArgo(u *url.URL) (proxy.Proxy, error) {
 	}
 
 	host := u.Host
-	path := u.RequestURI()
+	path := u.Path
 	ws := argo.NewWebsocket(scheme, cdnIP, port, host, path)
 	return proxy.NewArgo(ws), nil
 }

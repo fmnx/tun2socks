@@ -7,14 +7,15 @@ import (
 	"github.com/xjasonlyu/tun2socks/v2/dialer"
 	"net"
 	"net/http"
+	"strings"
 )
 
 type Websocket struct {
 	headers  http.Header
 	cdnIP    string
-	port     string
 	Url      string
 	Scheme   string
+	address  string
 	wsDialer *websocket.Dialer
 }
 
@@ -24,9 +25,14 @@ func NewWebsocket(scheme, cdnIP, port, host, path string) *Websocket {
 		TLSClientConfig: nil,
 		Proxy:           http.ProxyFromEnvironment,
 	}
+
+	address := fmt.Sprintf("%s:%s", cdnIP, port)
+	if strings.Contains(cdnIP, ":") {
+		address = fmt.Sprintf("[%s]:%s", cdnIP, port)
+	}
 	wsDialer.NetDial = func(network, addr string) (net.Conn, error) {
 		if cdnIP != "" {
-			return dialer.Dial(network, fmt.Sprintf("%s:%s", cdnIP, port))
+			return dialer.Dial(network, address)
 		}
 		return dialer.Dial(network, addr)
 	}
@@ -39,8 +45,8 @@ func NewWebsocket(scheme, cdnIP, port, host, path string) *Websocket {
 		wsDialer: wsDialer,
 		headers:  headers,
 		cdnIP:    cdnIP,
-		port:     port,
 		Scheme:   scheme,
+		address:  address,
 		Url:      fmt.Sprintf("%s://%s%s", scheme, host, path),
 	}
 
@@ -50,7 +56,7 @@ func (w *Websocket) getDialer(ctx context.Context) *websocket.Dialer {
 	wsDialer := &websocket.Dialer{}
 	wsDialer.NetDial = func(network, addr string) (net.Conn, error) {
 		if w.cdnIP != "" {
-			return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%s", w.cdnIP, w.port))
+			return dialer.DialContext(ctx, network, w.address)
 		}
 		return dialer.DialContext(ctx, network, addr)
 	}
