@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"syscall"
+	"time"
 
 	"go.uber.org/atomic"
 )
@@ -37,6 +38,23 @@ func DialContext(ctx context.Context, network, address string) (net.Conn, error)
 		InterfaceIndex: int(DefaultInterfaceIndex.Load()),
 		RoutingMark:    int(DefaultRoutingMark.Load()),
 	})
+}
+
+func Dial(network, address string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Timeout: 1 * time.Second,
+		Control: func(network, address string, c syscall.RawConn) error {
+			var err error
+			control := func(fd uintptr) {
+				syscall.SetsockoptString(int(fd), syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, DefaultInterfaceName.Load())
+			}
+			if err := c.Control(control); err != nil {
+				return err
+			}
+			return err
+		},
+	}
+	return dialer.Dial(network, address)
 }
 
 func DialContextWithOptions(ctx context.Context, network, address string, opts *Options) (net.Conn, error) {

@@ -24,11 +24,10 @@ func NewWebsocket(scheme, cdnIP, port, host, path string) *Websocket {
 		Proxy:           http.ProxyFromEnvironment,
 	}
 	wsDialer.NetDial = func(network, addr string) (net.Conn, error) {
-		// todo 这里应该支持自定义出口网卡
 		if cdnIP != "" {
-			return net.Dial(network, fmt.Sprintf("%s:%s", cdnIP, port))
+			return dialer.Dial(network, fmt.Sprintf("%s:%s", cdnIP, port))
 		}
-		return net.Dial(network, addr)
+		return dialer.Dial(network, addr)
 	}
 
 	headers := make(http.Header)
