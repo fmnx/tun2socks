@@ -13,7 +13,8 @@ type Websocket struct {
 	headers  http.Header
 	cdnIP    string
 	port     string
-	url      string
+	Url      string
+	Scheme   string
 	wsDialer *websocket.Dialer
 }
 
@@ -39,7 +40,8 @@ func NewWebsocket(scheme, cdnIP, port, host, path string) *Websocket {
 		headers:  headers,
 		cdnIP:    cdnIP,
 		port:     port,
-		url:      fmt.Sprintf("%s://%s%s", scheme, host, path),
+		Scheme:   scheme,
+		Url:      fmt.Sprintf("%s://%s%s", scheme, host, path),
 	}
 
 }
@@ -47,9 +49,8 @@ func NewWebsocket(scheme, cdnIP, port, host, path string) *Websocket {
 func (w *Websocket) getDialer(ctx context.Context) *websocket.Dialer {
 	wsDialer := &websocket.Dialer{}
 	wsDialer.NetDial = func(network, addr string) (net.Conn, error) {
-		// 连接指定的 IP 地址而不是解析域名
 		if w.cdnIP != "" {
-			return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%d", w.cdnIP, w.port))
+			return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%s", w.cdnIP, w.port))
 		}
 		return dialer.DialContext(ctx, network, addr)
 	}
@@ -71,7 +72,7 @@ func (w *Websocket) CreateWebsocketStream(ctx context.Context, network, address 
 	if ctx != nil {
 		wsDialer = w.getDialer(ctx)
 	}
-	wsConn, resp, err := wsDialer.Dial(w.url, w.getHeaders(network, address))
+	wsConn, resp, err := wsDialer.Dial(w.Url, w.getHeaders(network, address))
 
 	if resp != nil && resp.Body != nil {
 		_ = resp.Body.Close()

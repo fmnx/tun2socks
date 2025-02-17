@@ -15,6 +15,14 @@ type Argo struct {
 	ws *argo.Websocket
 }
 
+func (a *Argo) Proto() proto.Proto {
+	return a.Base.Proto()
+}
+
+func (a *Argo) Addr() string {
+	return a.ws.Url
+}
+
 func NewArgo(ws *argo.Websocket) *Argo {
 	return &Argo{
 		Base: &Base{
