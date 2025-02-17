@@ -135,7 +135,6 @@ func parseSocks5(u *url.URL) (proxy.Proxy, error) {
 }
 
 func parseArgo(u *url.URL) (proxy.Proxy, error) {
-	// -proxy argo://wss:104.20.6.78:443@github.qzzz.io/path
 
 	scheme := u.User.Username()
 	address, ok := u.User.Password()

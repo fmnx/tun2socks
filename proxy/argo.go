@@ -54,7 +54,6 @@ func (w wsPacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 }
 
 func (w wsPacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
-	w.rAddr = addr
 	n, err = w.Conn.Write(p)
 	if err != nil {
 		return 0, err
