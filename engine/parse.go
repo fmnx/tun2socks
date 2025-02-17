@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/xjasonlyu/tun2socks/v2/transport/argo"
 	"net"
 	"net/netip"
 	"net/url"
@@ -104,6 +105,8 @@ func parseProxy(s string) (proxy.Proxy, error) {
 		return parseShadowsocks(u)
 	case proto.Relay.String():
 		return parseRelay(u)
+	case proto.Argo.String():
+		return parseArgo(u)
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
 	}
@@ -129,6 +132,38 @@ func parseSocks5(u *url.URL) (proxy.Proxy, error) {
 		address = u.Path
 	}
 	return proxy.NewSocks5(address, username, password)
+}
+
+func parseArgo(u *url.URL) (proxy.Proxy, error) {
+	// -proxy argo://wss:104.20.6.78:443@github.qzzz.io/path
+
+	scheme := u.User.Username()
+	address, ok := u.User.Password()
+	if !ok {
+		address = ""
+		scheme = "wss"
+	}
+
+	cdnIP, port, err := net.SplitHostPort(address)
+	if err != nil {
+		cdnIP = ""
+		port = "443"
+	}
+
+	if scheme == "" || (scheme != "ws" && scheme != "wss") {
+		switch port {
+		case "80", "8080", "8880", "2052", "2082", "2086", "2095":
+			scheme = "ws"
+			break
+		default:
+			scheme = "wss"
+		}
+	}
+
+	host := u.Host
+	path := u.RequestURI()
+	ws := argo.NewWebsocket(scheme, cdnIP, port, host, path)
+	return proxy.NewArgo(ws), nil
 }
 
 func parseShadowsocks(u *url.URL) (proxy.Proxy, error) {
