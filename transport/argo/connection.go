@@ -88,15 +88,6 @@ type Conn struct {
 	done      bool
 }
 
-func NewConn(ctx context.Context, rw io.ReadWriter, log *zerolog.Logger) *Conn {
-	c := &Conn{
-		rw:  rw,
-		log: log,
-	}
-	go c.pinger(ctx)
-	return c
-}
-
 // Read will read messages from the websocket connection
 func (c *Conn) Read(reader []byte) (int, error) {
 	data, err := wsutil.ReadClientBinary(c.rw)
