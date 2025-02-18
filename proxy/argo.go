@@ -45,15 +45,15 @@ func (a *Argo) DialUDP(metadata *M.Metadata) (net.PacketConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &wsPacketConn{Conn: c}, nil
+	return &argoPacketConn{Conn: c}, nil
 }
 
-type wsPacketConn struct {
+type argoPacketConn struct {
 	net.Conn
 	rAddr net.Addr
 }
 
-func (w wsPacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+func (w argoPacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 	n, err = w.Conn.Read(p)
 	if err != nil {
 		return 0, nil, err
@@ -61,7 +61,7 @@ func (w wsPacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 	return n, w.rAddr, nil
 }
 
-func (w wsPacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+func (w argoPacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 	n, err = w.Conn.Write(p)
 	if err != nil {
 		return 0, err
